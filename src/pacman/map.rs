@@ -112,7 +112,7 @@ impl Map {
         self.set(x as u32, y as u32, Tile::NotWall(PU::Empty));
     }
 
-    pub fn scan_lines(&self) -> ScanLine {
+    pub fn scan_lines(&self) -> ScanLine<'_> {
         ScanLine {
             map: &self,
             line: 0,

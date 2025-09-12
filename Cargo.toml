@@ -1,12 +1,8 @@
 [package]
 name = "rust-gaem"
 version = "0.1.0"
-authors = ["Mendess2526 <pedro.mendes.26@gmail.com>"]
+authors = ["Mendess2526 <pedro.mendes.26@gmail.com>", "JeroenDM"]
 edition = "2018"
-
-[[bin]]
-name = "spinning-square"
-path = "spinning/square.rs"
 
 [[bin]]
 name = "pac"
