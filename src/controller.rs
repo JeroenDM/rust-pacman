@@ -3,15 +3,15 @@ use piston::input::Button;
 use piston::input::Event;
 use piston::input::{PressEvent, UpdateEvent};
 
-pub struct Controler {
+pub struct Controller {
     game: Pacman,
     delta: f64,
     paused: bool,
 }
 
-impl Controler {
+impl Controller {
     pub fn new(game: Pacman) -> Self {
-        Controler {
+        Controller {
             game,
             delta: 0.0,
             paused: false,
@@ -73,7 +73,7 @@ impl Controler {
 
 // DEBUG VIEWS
 #[allow(dead_code)]
-impl Controler {
+impl Controller {
     pub fn ghost_targets(&self) -> [(i32, i32); 4] {
         self.game.ghost_targets()
     }
