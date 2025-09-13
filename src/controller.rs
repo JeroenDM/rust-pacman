@@ -1,8 +1,51 @@
+use std::convert::TryFrom;
+
 use crate::pacman::{ghost::Ghost, ghost::GhostMode, map::Map, Direction, Pacman, Stats};
 use piston::input::Button;
 use piston::input::Event;
 use piston::input::{PressEvent, UpdateEvent};
 use piston::UpdateArgs;
+
+#[derive(Debug, Clone, Copy)]
+pub enum Input {
+    Up,
+    Down,
+    Left,
+    Right,
+    Quit,
+    Pause,
+    None,
+}
+
+impl From<Input> for char {
+    fn from(val: Input) -> Self {
+        match val {
+            Input::Up => 'u',
+            Input::Down => 'd',
+            Input::Left => 'l',
+            Input::Right => 'r',
+            Input::Quit => 'q',
+            Input::Pause => 'p',
+            Input::None => 'n',
+        }
+    }
+}
+
+impl TryFrom<char> for Input {
+    type Error = String;
+
+    fn try_from(c: char) -> Result<Self, Self::Error> {
+        match c {
+            'u' => Ok(Input::Up),
+            'd' => Ok(Input::Down),
+            'l' => Ok(Input::Left),
+            'r' => Ok(Input::Right),
+            'q' => Ok(Input::Quit),
+            'p' => Ok(Input::Pause),
+            _ => Err(format!("Invalid input character: '{}'", c)),
+        }
+    }
+}
 
 pub struct Controller {
     game: Pacman,
@@ -19,26 +62,16 @@ impl Controller {
         }
     }
 
-    pub fn input(&mut self, button: Button) -> bool {
-        use piston::input::keyboard::Key;
+    pub fn input(&mut self, input: Input) -> bool {
         let mut should_quit = false;
-        match button {
-            Button::Keyboard(Key::Up) | Button::Keyboard(Key::I) => {
-                self.game.set_direction_intent(Direction::Up)
-            }
-            Button::Keyboard(Key::Down) | Button::Keyboard(Key::K) => {
-                self.game.set_direction_intent(Direction::Down)
-            }
-            Button::Keyboard(Key::Left) | Button::Keyboard(Key::J) => {
-                self.game.set_direction_intent(Direction::Left)
-            }
-            Button::Keyboard(Key::Right) | Button::Keyboard(Key::L) => {
-                self.game.set_direction_intent(Direction::Right)
-            }
-            Button::Keyboard(Key::Q) => should_quit = true,
-            Button::Keyboard(Key::P) => self.paused = !self.paused,
-            // Button::Keyboard(Key::U) => self.game.level_up(),
-            _ => (),
+        match input {
+            Input::Up => self.game.set_direction_intent(Direction::Up),
+            Input::Down => self.game.set_direction_intent(Direction::Down),
+            Input::Left => self.game.set_direction_intent(Direction::Left),
+            Input::Right => self.game.set_direction_intent(Direction::Right),
+            Input::Quit => should_quit = true,
+            Input::Pause => self.paused = !self.paused,
+            Input::None => (),
         }
         return should_quit;
     }
@@ -81,4 +114,10 @@ impl Controller {
     pub fn ghost_targets(&self) -> [(i32, i32); 4] {
         self.game.ghost_targets()
     }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
 }
