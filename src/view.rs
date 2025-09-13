@@ -241,8 +241,12 @@ impl View {
         //         [0.0, 1.0, 1.0, 1.0],
         //         [1.0, 0.7216, 0.3176, 1.0],
         //     ];
-        //         Rectangle::new_border(ghost_colors[i], 1.0)
-        //             .draw(offset(self.entity_sq(sqr.0, sqr.1)), &c.draw_state, c.transform, g);
+        //     Rectangle::new_border(ghost_colors[i], 1.0).draw(
+        //         offset(self.entity_sq(sqr.0, sqr.1)),
+        //         &c.draw_state,
+        //         c.transform,
+        //         g,
+        //     );
         // }
     }
 

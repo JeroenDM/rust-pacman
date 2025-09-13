@@ -2,6 +2,7 @@ use crate::pacman::{ghost::Ghost, ghost::GhostMode, map::Map, Direction, Pacman,
 use piston::input::Button;
 use piston::input::Event;
 use piston::input::{PressEvent, UpdateEvent};
+use piston::UpdateArgs;
 
 pub struct Controller {
     game: Pacman,
@@ -18,36 +19,39 @@ impl Controller {
         }
     }
 
-    pub fn event(&mut self, event: &Event) -> bool {
-        if let Some(k) = event.press_args() {
-            use piston::input::keyboard::Key;
-            match k {
-                Button::Keyboard(Key::Up) => self.game.set_direction_intent(Direction::Up),
-                Button::Keyboard(Key::Down) => self.game.set_direction_intent(Direction::Down),
-                Button::Keyboard(Key::Left) => self.game.set_direction_intent(Direction::Left),
-                Button::Keyboard(Key::Right) => self.game.set_direction_intent(Direction::Right),
-                Button::Keyboard(Key::Q) => return true,
-                Button::Keyboard(Key::K) => self.game.set_direction_intent(Direction::Up),
-                Button::Keyboard(Key::J) => self.game.set_direction_intent(Direction::Down),
-                Button::Keyboard(Key::H) => self.game.set_direction_intent(Direction::Left),
-                Button::Keyboard(Key::L) => self.game.set_direction_intent(Direction::Right),
-                Button::Keyboard(Key::P) => self.paused = !self.paused,
-                // Button::Keyboard(Key::U) => self.game.level_up(),
-                _ => (),
+    pub fn input(&mut self, button: Button) -> bool {
+        use piston::input::keyboard::Key;
+        let mut should_quit = false;
+        match button {
+            Button::Keyboard(Key::Up) | Button::Keyboard(Key::I) => {
+                self.game.set_direction_intent(Direction::Up)
+            }
+            Button::Keyboard(Key::Down) | Button::Keyboard(Key::K) => {
+                self.game.set_direction_intent(Direction::Down)
+            }
+            Button::Keyboard(Key::Left) | Button::Keyboard(Key::J) => {
+                self.game.set_direction_intent(Direction::Left)
+            }
+            Button::Keyboard(Key::Right) | Button::Keyboard(Key::L) => {
+                self.game.set_direction_intent(Direction::Right)
+            }
+            Button::Keyboard(Key::Q) => should_quit = true,
+            Button::Keyboard(Key::P) => self.paused = !self.paused,
+            // Button::Keyboard(Key::U) => self.game.level_up(),
+            _ => (),
+        }
+        return should_quit;
+    }
+
+    pub fn update(&mut self, u: UpdateArgs) {
+        self.delta += u.dt;
+        if self.delta > 0.25 {
+            self.delta -= 0.25;
+            if !self.paused {
+                println!("tick!");
+                self.game.tick();
             }
         }
-
-        if let Some(u) = event.update_args() {
-            self.delta += u.dt;
-            if self.delta > 0.25 {
-                self.delta -= 0.25;
-                if !self.paused {
-                    self.game.tick();
-                }
-            }
-        }
-
-        false
     }
 
     pub fn get_player(&self) -> (i32, i32, Direction) {
