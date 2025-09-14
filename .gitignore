@@ -8,3 +8,6 @@
 
 # replay files
 *.game.txt
+
+
+.vscode/

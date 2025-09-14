@@ -78,59 +78,73 @@ fn run(events: &mut Events, game: &mut Game) -> sim::Recording {
     return recording;
 }
 
-fn run_from_recording_nogui(game: &mut Game, recording: sim::Recording) {
-    assert!(recording.len() > 1);
-    let last_input = recording.last().unwrap();
-    assert!(last_input.1 == 'q');
-    let max_frame_count = last_input.0;
+fn run_from_recording_nogui(game: &mut Game, recording: sim::Recording) -> Result<(), String> {
+    // Input Validation
+    let last_input = recording.last().ok_or("Empty recording.".to_string())?;
+    if last_input.1 != 'q' {
+        return Err("This recording will never quite.".to_string());
+    }
+
+    let mut inputs = Vec::<(u64, game::Input)>::new();
+    inputs.reserve(recording.len());
+    for (count, char) in &recording {
+        let input = game::Input::try_from(*char)?;
+        inputs.push((*count, input));
+    }
 
     let mut idx = 0;
-    for frame_count in 0..max_frame_count {
-        game.update();
-
-        if idx >= recording.len() {
-            return;
-        }
-        if recording[idx].0 == frame_count {
-            match game::Input::try_from(recording[idx].1) {
-                Ok(input) => {
-                    game.input(input);
-                    idx += 1;
-                }
-                Err(e) => panic!("{}", e),
+    for frame_count in 0..last_input.0 {
+        // I think this cannot go out of bounds because of the validation for 'q' above.
+        if inputs[idx].0 == frame_count {
+            if game.input(inputs[idx].1) {
+                return Ok(());
             }
+            idx += 1;
         }
+        game.update();
     }
+
+    Ok(())
 }
 
-fn run_from_recoding(events: &mut Events, game: &mut Game, inputs: sim::Recording) {
+fn run_from_recoding(
+    events: &mut Events,
+    game: &mut Game,
+    recording: sim::Recording,
+) -> Result<(), String> {
     let mut window: Window = WindowSettings::new("pacman-game", [750, 750])
         .graphics_api(GL_VERSION)
         .exit_on_esc(true)
         .build()
         .unwrap();
+
+    // Input Validation
+    let last_input = recording.last().ok_or("Empty recording.".to_string())?;
+    if last_input.1 != 'q' {
+        return Err("This recording will never quite.".to_string());
+    }
+
+    let mut inputs = Vec::<(u64, game::Input)>::new();
+    inputs.reserve(recording.len());
+    for (count, char) in &recording {
+        let input = game::Input::try_from(*char)?;
+        inputs.push((*count, input));
+    }
+
     let mut gl = GlGraphics::new(GL_VERSION);
     let mut view = View::new();
-
     let mut idx: usize = 0;
 
     let mut frame_count: u64 = 0;
     while let Some(e) = events.next(&mut window) {
         if let Some(_) = e.update_args() {
-            // Input
-            if idx >= inputs.len() {
-                return;
-            }
+            // I think this cannot go out of bounds because of the validation for 'q' above.
             if inputs[idx].0 == frame_count {
-                match game::Input::try_from(inputs[idx].1) {
-                    Ok(input) => {
-                        game.input(input);
-                        idx += 1;
-                    }
-                    Err(e) => panic!("{}", e),
+                if game.input(inputs[idx].1) {
+                    return Ok(());
                 }
+                idx += 1;
             }
-
             // Update
             game.update();
             frame_count += 1;
@@ -146,6 +160,8 @@ fn run_from_recoding(events: &mut Events, game: &mut Game, inputs: sim::Recordin
             view.resize(r.window_size[0], r.window_size[1]);
         }
     }
+
+    Ok(())
 }
 
 #[derive(Debug, Clone, ValueEnum, PartialEq, Eq)]
@@ -186,10 +202,14 @@ fn main() {
 
     if args.mode == AppMode::Replay && should_render {
         let recording = sim::read_recording_from_file("recording.game.txt").unwrap();
-        run_from_recoding(&mut events, &mut game, recording);
+        if let Err(e) = run_from_recoding(&mut events, &mut game, recording) {
+            eprintln!("ERROR: {e}");
+        }
     } else if args.mode == AppMode::Replay && !should_render {
         let recording = sim::read_recording_from_file("recording.game.txt").unwrap();
-        run_from_recording_nogui(&mut game, recording);
+        if let Err(e) = run_from_recording_nogui(&mut game, recording) {
+            eprintln!("ERROR: {e}");
+        }
     } else if args.mode == AppMode::Record && should_render {
         let recording = run(&mut events, &mut game);
         sim::write_recording_to_file(&recording, "recording.game.txt").unwrap();

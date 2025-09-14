@@ -115,7 +115,7 @@ impl Game {
 
     pub fn update(&mut self) {
         if !self.paused {
-            println!("tick!");
+            println!("score: {}", self.stats().score);
             self.tick();
         }
     }

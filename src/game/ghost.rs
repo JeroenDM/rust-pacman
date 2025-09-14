@@ -67,31 +67,31 @@ impl Ghosts {
 
     pub fn move_ghosts(&mut self, map: &Map, player: (i32, i32, Direction)) {
         let blinky = self.ghosts[0].pos;
-        for ghst in self.ghosts.iter_mut() {
-            if ghst.house_timer != 0 {
-                ghst.house_move(map);
+        for g in self.ghosts.iter_mut() {
+            if g.house_timer != 0 {
+                g.house_move(map);
                 continue;
             }
             let plr = (player.0, player.1);
             match self.ghost_mode {
-                GhostMode::Frightened => ghst.flee(map),
+                GhostMode::Frightened => g.flee(map),
                 GhostMode::Chase => {
-                    let target = match ghst.name {
+                    let target = match g.name {
                         Name::Blinky => plr,
                         Name::Pinky => calc_pinky_target(player),
                         Name::Inky => calc_inky_target(blinky, player),
-                        Name::Clyde => calc_clyde_target(ghst.pos, plr),
+                        Name::Clyde => calc_clyde_target(g.pos, plr),
                     };
-                    ghst.move_to(map, target);
+                    g.move_to(map, target);
                 }
                 GhostMode::Scatter => {
-                    let target = match ghst.name {
+                    let target = match g.name {
                         Name::Blinky => BLINKY_HOME,
                         Name::Pinky => PINKY_HOME,
                         Name::Inky => INKY_HOME,
                         Name::Clyde => CLYDE_HOME,
                     };
-                    ghst.move_to(map, target);
+                    g.move_to(map, target);
                 }
             }
         }
