@@ -66,7 +66,6 @@ pub struct Game {
     direction_intent: Direction,
     ghosts: Ghosts,
     ticks: u32,
-    delta: f64,
     paused: bool,
 }
 
@@ -114,14 +113,10 @@ impl Game {
         return should_quit;
     }
 
-    pub fn update(&mut self, dt: f64) {
-        self.delta += dt;
-        if self.delta > 0.25 {
-            self.delta -= 0.25;
-            if !self.paused {
-                println!("tick!");
-                self.tick();
-            }
+    pub fn update(&mut self) {
+        if !self.paused {
+            println!("tick!");
+            self.tick();
         }
     }
 
@@ -282,7 +277,6 @@ impl Default for Game {
             direction_intent: Direction::Left,
             ghosts: Ghosts::new(),
             ticks: 0,
-            delta: 0.0,
             paused: false,
         }
     }
