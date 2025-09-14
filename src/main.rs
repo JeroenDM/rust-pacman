@@ -14,12 +14,13 @@ use piston::{Button, PressEvent, UpdateEvent};
 use clap::{Parser, ValueEnum};
 
 use crate::game::Game;
+use crate::tools::Recording;
 use crate::view::View;
 
 fn button_to_input(button: Button) -> game::Input {
+    use game::Input;
     use piston::input::keyboard::Key;
     use piston::input::Button::Keyboard;
-    use game::Input;
 
     match button {
         Keyboard(Key::Up) | Keyboard(Key::I) => Input::Up,
@@ -78,6 +79,35 @@ fn run(events: &mut Events, controller: &mut Game) -> tools::Recording {
         }
     }
     return recording;
+}
+
+fn run_from_recording_nogui(
+    events: &mut Events,
+    controller: &mut Game,
+    recording: tools::Recording,
+) {
+    let mut window = NoWindow::new(&WindowSettings::new("pacman-game", [750, 750]));
+
+    let mut idx = 0;
+    let mut frame_count = 0;
+    while let Some(e) = events.next(&mut window) {
+        if let Some(update) = e.update_args() {
+            controller.update(update.dt);
+            frame_count += 1;
+            if idx >= recording.len() {
+                return;
+            }
+            if recording[idx].0 == frame_count {
+                match game::Input::try_from(recording[idx].1) {
+                    Ok(input) => {
+                        controller.input(input);
+                        idx += 1;
+                    }
+                    Err(e) => panic!("{}", e),
+                }
+            }
+        }
+    }
 }
 
 fn run_from_recoding(events: &mut Events, controller: &mut Game, inputs: tools::Recording) {
@@ -155,12 +185,15 @@ fn main() {
     settings.ups = 50;
     let mut events = Events::new(settings);
 
-    if args.mode == AppMode::Replay {
-        let recording = tools::read_recording_from_file("recording.txt").unwrap();
+    if args.mode == AppMode::Replay && should_render {
+        let recording = tools::read_recording_from_file("recording.game.txt").unwrap();
         run_from_recoding(&mut events, &mut controller, recording);
-    } else if should_render {
+    } else if args.mode == AppMode::Replay && !should_render {
+        let recording = tools::read_recording_from_file("recording.game.txt").unwrap();
+        run_from_recording_nogui(&mut events, &mut controller, recording);
+    } else if args.mode == AppMode::Record && should_render {
         let recording = run(&mut events, &mut controller);
-        tools::write_recording_to_file(&recording, "recording.txt").unwrap();
+        tools::write_recording_to_file(&recording, "recording.game.txt").unwrap();
     } else {
         run_nogui(&mut events, &mut controller);
     }
