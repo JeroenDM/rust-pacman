@@ -1,6 +1,8 @@
 pub mod ghost;
 pub mod map;
 
+use std::convert::TryFrom;
+
 use self::map::Map;
 use self::map::Tile;
 use self::map::PU;
@@ -11,6 +13,47 @@ const START_POS: (i32, i32) = (14, 23);
 const SCORE_PELLET: u32 = 10;
 const SCORE_PU: u32 = 50;
 const SCORE_GHOST: u32 = 200;
+
+#[derive(Debug, Clone, Copy)]
+pub enum Input {
+    Up,
+    Down,
+    Left,
+    Right,
+    Quit,
+    Pause,
+    None,
+}
+
+impl From<Input> for char {
+    fn from(val: Input) -> Self {
+        match val {
+            Input::Up => 'u',
+            Input::Down => 'd',
+            Input::Left => 'l',
+            Input::Right => 'r',
+            Input::Quit => 'q',
+            Input::Pause => 'p',
+            Input::None => 'n',
+        }
+    }
+}
+
+impl TryFrom<char> for Input {
+    type Error = String;
+
+    fn try_from(c: char) -> Result<Self, Self::Error> {
+        match c {
+            'u' => Ok(Input::Up),
+            'd' => Ok(Input::Down),
+            'l' => Ok(Input::Left),
+            'r' => Ok(Input::Right),
+            'q' => Ok(Input::Quit),
+            'p' => Ok(Input::Pause),
+            _ => Err(format!("Invalid input character: '{}'", c)),
+        }
+    }
+}
 
 pub struct Pacman {
     map: Map,
@@ -23,6 +66,8 @@ pub struct Pacman {
     direction_intent: Direction,
     ghosts: Ghosts,
     ticks: u32,
+    delta: f64,
+    paused: bool,
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -53,6 +98,51 @@ pub struct Stats {
 impl Pacman {
     pub fn new() -> Self {
         Pacman::default()
+    }
+
+    pub fn input(&mut self, input: Input) -> bool {
+        let mut should_quit = false;
+        match input {
+            Input::Up => self.set_direction_intent(Direction::Up),
+            Input::Down => self.set_direction_intent(Direction::Down),
+            Input::Left => self.set_direction_intent(Direction::Left),
+            Input::Right => self.set_direction_intent(Direction::Right),
+            Input::Quit => should_quit = true,
+            Input::Pause => self.paused = !self.paused,
+            Input::None => (),
+        }
+        return should_quit;
+    }
+
+    pub fn update(&mut self, dt: f64) {
+        self.delta += dt;
+        if self.delta > 0.25 {
+            self.delta -= 0.25;
+            if !self.paused {
+                println!("tick!");
+                self.tick();
+            }
+        }
+    }
+
+    pub fn get_player(&self) -> (i32, i32, Direction) {
+        self.player()
+    }
+
+    pub fn get_map(&self) -> &Map {
+        self.map()
+    }
+
+    pub fn get_ghosts(&self) -> &[Ghost] {
+        self.ghosts()
+    }
+
+    pub fn frightened(&self) -> bool {
+        self.ghost_mode() == GhostMode::Frightened
+    }
+
+    pub fn get_stats(&self) -> Stats {
+        self.stats()
     }
 
     pub fn set_direction_intent(&mut self, direction: Direction) {
@@ -192,6 +282,8 @@ impl Default for Pacman {
             direction_intent: Direction::Left,
             ghosts: Ghosts::new(),
             ticks: 0,
+            delta: 0.0,
+            paused: false,
         }
     }
 }

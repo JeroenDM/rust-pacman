@@ -1,4 +1,3 @@
-mod controller;
 mod pacman;
 mod tools;
 mod view;
@@ -14,15 +13,13 @@ use piston::{Button, ButtonEvent, PressEvent, UpdateEvent};
 
 use clap::{Parser, ValueEnum};
 
-use crate::controller::Controller;
 use crate::pacman::Pacman;
 use crate::view::View;
 
-use controller::Input;
-
-fn button_to_input(button: Button) -> Input {
+fn button_to_input(button: Button) -> pacman::Input {
     use piston::input::keyboard::Key;
     use piston::input::Button::Keyboard;
+    use pacman::Input;
 
     match button {
         Keyboard(Key::Up) | Keyboard(Key::I) => Input::Up,
@@ -35,17 +32,17 @@ fn button_to_input(button: Button) -> Input {
     }
 }
 
-fn run_nogui(events: &mut Events, controller: &mut Controller) {
+fn run_nogui(events: &mut Events, controller: &mut Pacman) {
     let mut window = NoWindow::new(&WindowSettings::new("pacman-game", [750, 750]));
 
     while let Some(e) = events.next(&mut window) {
         if let Some(update) = e.update_args() {
-            controller.update(update);
+            controller.update(update.dt);
         }
     }
 }
 
-fn run(events: &mut Events, controller: &mut Controller) -> tools::Recording {
+fn run(events: &mut Events, controller: &mut Pacman) -> tools::Recording {
     let mut recording = tools::Recording::new();
     const GL_VERSION: OpenGL = OpenGL::V4_5;
     let mut window: Window = WindowSettings::new("pacman-game", [750, 750])
@@ -68,7 +65,7 @@ fn run(events: &mut Events, controller: &mut Controller) -> tools::Recording {
             view.resize(r.window_size[0], r.window_size[1]);
         }
         if let Some(update) = e.update_args() {
-            controller.update(update);
+            controller.update(update.dt);
             frame_count += 1;
             // recording.push((frame_count, Input::None.into()));
         }
@@ -83,7 +80,7 @@ fn run(events: &mut Events, controller: &mut Controller) -> tools::Recording {
     return recording;
 }
 
-fn run_from_recoding(events: &mut Events, controller: &mut Controller, inputs: tools::Recording) {
+fn run_from_recoding(events: &mut Events, controller: &mut Pacman, inputs: tools::Recording) {
     const GL_VERSION: OpenGL = OpenGL::V4_5;
     let mut window: Window = WindowSettings::new("pacman-game", [750, 750])
         .graphics_api(GL_VERSION)
@@ -107,13 +104,13 @@ fn run_from_recoding(events: &mut Events, controller: &mut Controller, inputs: t
             view.resize(r.window_size[0], r.window_size[1]);
         }
         if let Some(update) = e.update_args() {
-            controller.update(update);
+            controller.update(update.dt);
             frame_count += 1;
             if idx >= inputs.len() {
                 return;
             }
             if inputs[idx].0 == frame_count {
-                match Input::try_from(inputs[idx].1) {
+                match pacman::Input::try_from(inputs[idx].1) {
                     Ok(input) => {
                         controller.input(input);
                         idx += 1;
@@ -152,7 +149,7 @@ fn main() {
 
     let should_render = !args.nogui;
 
-    let mut controller = Controller::new(Pacman::new());
+    let mut controller = Pacman::new();
     let mut settings = EventSettings::new();
     // settings.bench_mode = true;
     settings.ups = 50;
