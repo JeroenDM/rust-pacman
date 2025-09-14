@@ -1,4 +1,4 @@
-mod pacman;
+mod game;
 mod tools;
 mod view;
 
@@ -9,17 +9,17 @@ use opengl_graphics::{GlGraphics, OpenGL};
 use piston::event_loop::{EventSettings, Events};
 use piston::input::{RenderEvent, ResizeEvent};
 use piston::window::{NoWindow, WindowSettings};
-use piston::{Button, ButtonEvent, PressEvent, UpdateEvent};
+use piston::{Button, PressEvent, UpdateEvent};
 
 use clap::{Parser, ValueEnum};
 
-use crate::pacman::Pacman;
+use crate::game::Game;
 use crate::view::View;
 
-fn button_to_input(button: Button) -> pacman::Input {
+fn button_to_input(button: Button) -> game::Input {
     use piston::input::keyboard::Key;
     use piston::input::Button::Keyboard;
-    use pacman::Input;
+    use game::Input;
 
     match button {
         Keyboard(Key::Up) | Keyboard(Key::I) => Input::Up,
@@ -32,7 +32,7 @@ fn button_to_input(button: Button) -> pacman::Input {
     }
 }
 
-fn run_nogui(events: &mut Events, controller: &mut Pacman) {
+fn run_nogui(events: &mut Events, controller: &mut Game) {
     let mut window = NoWindow::new(&WindowSettings::new("pacman-game", [750, 750]));
 
     while let Some(e) = events.next(&mut window) {
@@ -42,7 +42,7 @@ fn run_nogui(events: &mut Events, controller: &mut Pacman) {
     }
 }
 
-fn run(events: &mut Events, controller: &mut Pacman) -> tools::Recording {
+fn run(events: &mut Events, controller: &mut Game) -> tools::Recording {
     let mut recording = tools::Recording::new();
     const GL_VERSION: OpenGL = OpenGL::V4_5;
     let mut window: Window = WindowSettings::new("pacman-game", [750, 750])
@@ -80,7 +80,7 @@ fn run(events: &mut Events, controller: &mut Pacman) -> tools::Recording {
     return recording;
 }
 
-fn run_from_recoding(events: &mut Events, controller: &mut Pacman, inputs: tools::Recording) {
+fn run_from_recoding(events: &mut Events, controller: &mut Game, inputs: tools::Recording) {
     const GL_VERSION: OpenGL = OpenGL::V4_5;
     let mut window: Window = WindowSettings::new("pacman-game", [750, 750])
         .graphics_api(GL_VERSION)
@@ -110,7 +110,7 @@ fn run_from_recoding(events: &mut Events, controller: &mut Pacman, inputs: tools
                 return;
             }
             if inputs[idx].0 == frame_count {
-                match pacman::Input::try_from(inputs[idx].1) {
+                match game::Input::try_from(inputs[idx].1) {
                     Ok(input) => {
                         controller.input(input);
                         idx += 1;
@@ -149,7 +149,7 @@ fn main() {
 
     let should_render = !args.nogui;
 
-    let mut controller = Pacman::new();
+    let mut controller = Game::new();
     let mut settings = EventSettings::new();
     // settings.bench_mode = true;
     settings.ups = 50;

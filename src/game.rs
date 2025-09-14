@@ -55,7 +55,7 @@ impl TryFrom<char> for Input {
     }
 }
 
-pub struct Pacman {
+pub struct Game {
     map: Map,
     lives: u8,
     score: u32,
@@ -95,9 +95,9 @@ pub struct Stats {
     pub level: usize,
 }
 
-impl Pacman {
+impl Game {
     pub fn new() -> Self {
-        Pacman::default()
+        Game::default()
     }
 
     pub fn input(&mut self, input: Input) -> bool {
@@ -269,9 +269,9 @@ impl Pacman {
     }
 }
 
-impl Default for Pacman {
+impl Default for Game {
     fn default() -> Self {
-        Pacman {
+        Game {
             map: Map::new(),
             lives: 5,
             score: 0,
@@ -290,7 +290,7 @@ impl Default for Pacman {
 
 // // DEBUG VIEWS
 #[allow(dead_code)]
-impl Pacman {
+impl Game {
     pub fn ghost_targets(&self) -> [(i32, i32); 4] {
         self.ghosts.targets((self.x, self.y, self.direction))
     }
