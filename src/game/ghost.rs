@@ -1,3 +1,5 @@
+use crate::sim::{self, Simulator};
+
 use super::map::{self, Map};
 use super::Direction;
 
@@ -28,15 +30,16 @@ pub enum Interaction {
     KillGhost(u8),
 }
 
-pub struct Ghosts {
+pub struct Ghosts<S: sim::Simulator> {
     ghosts: [Ghost; 4],
     ghost_mode: GhostMode,
     mode_timer: u16,
     frightened_timer: u16,
     num_scatters: u8,
+    sim: S,
 }
 
-impl Ghosts {
+impl<S: sim::Simulator> Ghosts<S> {
     pub fn new() -> Self {
         Ghosts {
             ghosts: [
@@ -49,6 +52,7 @@ impl Ghosts {
             mode_timer: 0,
             frightened_timer: 0,
             num_scatters: 2,
+            sim: S::new(),
         }
     }
 
@@ -69,12 +73,12 @@ impl Ghosts {
         let blinky = self.ghosts[0].pos;
         for g in self.ghosts.iter_mut() {
             if g.house_timer != 0 {
-                g.house_move(map);
+                g.house_move(map, &mut self.sim);
                 continue;
             }
             let plr = (player.0, player.1);
             match self.ghost_mode {
-                GhostMode::Frightened => g.flee(map),
+                GhostMode::Frightened => g.flee(map, &mut self.sim),
                 GhostMode::Chase => {
                     let target = match g.name {
                         Name::Blinky => plr,
@@ -198,13 +202,14 @@ impl Ghost {
         }
     }
 
-    fn flee(&mut self, map: &Map) {
+    fn flee<S: sim::Simulator>(&mut self, map: &Map, sim: &mut S) {
         let mut options = self.get_options();
         options.retain(|opt| *opt != self.last_pos);
-        use rand::Rng;
-        let mut rng = rand::thread_rng();
+        // use rand::Rng;
+        // let mut rng = rand::thread_rng();
         while !options.is_empty() {
-            let i = rng.gen::<usize>() % options.len();
+            // let i = rng.gen::<usize>() % options.len();
+            let i = sim.rand() % options.len();
             let opt = options.swap_remove(i);
             if !map.is_wall(opt.0, opt.1) {
                 self.change_pos(opt);
@@ -213,13 +218,13 @@ impl Ghost {
         }
     }
 
-    fn house_move(&mut self, map: &Map) {
+    fn house_move<S: Simulator>(&mut self, map: &Map, sim: &mut S) {
         let mut options = self.get_options();
         options.retain(|opt| *opt != self.last_pos);
-        use rand::Rng;
-        let mut rng = rand::thread_rng();
+        // use rand::Rng;
+        // let mut rng = rand::thread_rng();
         while !options.is_empty() {
-            let i = rng.gen::<usize>() % options.len();
+            let i = sim.rand() % options.len();
             let opt = options.swap_remove(i);
             if map.is_house(opt.0, opt.1) {
                 self.change_pos(opt);
@@ -282,18 +287,18 @@ fn calc_clyde_target(clyde: (i32, i32), plr: (i32, i32)) -> (i32, i32) {
 }
 
 // DEBUG VIEWS
-#[allow(dead_code)]
-impl Ghosts {
-    pub fn targets(&self, plr: (i32, i32, Direction)) -> [(i32, i32); 4] {
-        match self.ghost_mode {
-            GhostMode::Chase => [
-                (plr.0, plr.1),
-                calc_pinky_target(plr),
-                calc_inky_target(self.ghosts[0].pos, plr),
-                calc_clyde_target(self.ghosts[3].pos, (plr.0, plr.1)),
-            ],
-            GhostMode::Scatter => [BLINKY_HOME, PINKY_HOME, INKY_HOME, CLYDE_HOME],
-            GhostMode::Frightened => [(300, 300), (300, 300), (300, 300), (300, 300)],
-        }
-    }
-}
+// #[allow(dead_code)]
+// impl<S> Ghosts {
+//     pub fn targets(&self, plr: (i32, i32, Direction)) -> [(i32, i32); 4] {
+//         match self.ghost_mode {
+//             GhostMode::Chase => [
+//                 (plr.0, plr.1),
+//                 calc_pinky_target(plr),
+//                 calc_inky_target(self.ghosts[0].pos, plr),
+//                 calc_clyde_target(self.ghosts[3].pos, (plr.0, plr.1)),
+//             ],
+//             GhostMode::Scatter => [BLINKY_HOME, PINKY_HOME, INKY_HOME, CLYDE_HOME],
+//             GhostMode::Frightened => [(300, 300), (300, 300), (300, 300), (300, 300)],
+//         }
+//     }
+// }

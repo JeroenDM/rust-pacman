@@ -36,7 +36,23 @@ fn button_to_input(button: Button) -> game::Input {
     }
 }
 
-fn run(events: &mut Events, game: &mut Game) -> sim::Recording {
+#[derive(Debug, Clone, Copy)]
+pub struct Sim {
+    x: usize,
+}
+
+impl sim::Simulator for Sim {
+    fn new() -> Self {
+        Self { x: 5 }
+    }
+
+    fn rand(&mut self) -> usize {
+        self.x += 1;
+        self.x
+    }
+}
+
+fn run<S: sim::Simulator>(events: &mut Events, game: &mut Game<S>) -> sim::Recording {
     let mut recording = sim::Recording::new();
     const GL_VERSION: OpenGL = OpenGL::V4_5;
     let mut window: Window = WindowSettings::new("pacman-game", [750, 750])
@@ -78,7 +94,7 @@ fn run(events: &mut Events, game: &mut Game) -> sim::Recording {
     return recording;
 }
 
-fn run_from_recording_nogui(game: &mut Game, recording: sim::Recording) -> Result<(), String> {
+fn run_from_recording_nogui(game: &mut Game<Sim>, recording: sim::Recording) -> Result<(), String> {
     // Input Validation
     let last_input = recording.last().ok_or("Empty recording.".to_string())?;
     if last_input.1 != 'q' {
@@ -109,7 +125,7 @@ fn run_from_recording_nogui(game: &mut Game, recording: sim::Recording) -> Resul
 
 fn run_from_recoding(
     events: &mut Events,
-    game: &mut Game,
+    game: &mut Game<Sim>,
     recording: sim::Recording,
 ) -> Result<(), String> {
     let mut window: Window = WindowSettings::new("pacman-game", [750, 750])
@@ -194,7 +210,7 @@ fn main() {
 
     let should_render = !args.nogui;
 
-    let mut game = Game::new();
+    let mut game = Game::<Sim>::new();
     let mut settings = EventSettings::new();
     // settings.bench_mode = true;
     settings.ups = (UPDATE_HZ as f64 * args.playback_speed) as u64;

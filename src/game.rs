@@ -3,6 +3,8 @@ pub mod map;
 
 use std::convert::TryFrom;
 
+use crate::sim;
+
 use self::map::Map;
 use self::map::Tile;
 use self::map::PU;
@@ -55,7 +57,7 @@ impl TryFrom<char> for Input {
     }
 }
 
-pub struct Game {
+pub struct Game<S: sim::Simulator> {
     map: Map,
     lives: u8,
     score: u32,
@@ -64,7 +66,7 @@ pub struct Game {
     y: i32,
     direction: Direction,
     direction_intent: Direction,
-    ghosts: Ghosts,
+    ghosts: Ghosts<S>,
     ticks: u32,
     paused: bool,
 }
@@ -94,7 +96,7 @@ pub struct Stats {
     pub level: usize,
 }
 
-impl Game {
+impl<S: sim::Simulator> Game<S> {
     pub fn new() -> Self {
         Game::default()
     }
@@ -264,7 +266,7 @@ impl Game {
     }
 }
 
-impl Default for Game {
+impl<S: sim::Simulator> Default for Game<S> {
     fn default() -> Self {
         Game {
             map: Map::new(),
@@ -282,14 +284,14 @@ impl Default for Game {
     }
 }
 
-// // DEBUG VIEWS
-#[allow(dead_code)]
-impl Game {
-    pub fn ghost_targets(&self) -> [(i32, i32); 4] {
-        self.ghosts.targets((self.x, self.y, self.direction))
-    }
+// // // DEBUG VIEWS
+// #[allow(dead_code)]
+// impl Game {
+//     pub fn ghost_targets(&self) -> [(i32, i32); 4] {
+//         self.ghosts.targets((self.x, self.y, self.direction))
+//     }
 
-    pub fn level_up(&mut self) {
-        self.map.remove_all_pellets();
-    }
-}
+//     pub fn level_up(&mut self) {
+//         self.map.remove_all_pellets();
+//     }
+// }
