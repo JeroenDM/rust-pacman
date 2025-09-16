@@ -48,14 +48,31 @@ fn run(events: &mut Events, game: &mut Game) -> sim::Recording {
     let mut view = View::new();
 
     let mut frame_count: u64 = 0;
+    let mut current_frame_input: Option<game::Input> = None;
     while let Some(e) = events.next(&mut window) {
         // Input
         if let Some(button) = e.press_args() {
+            println!("[{}]-- input --", frame_count);
             let input = button_to_input(button);
-            recording.push((frame_count, input.into()));
-            if game.input(input) {
-                return recording;
+            // This will overwrite the previous input.
+            // The previous input is potentially never used if there was no update call
+            // below in the current frame.
+            current_frame_input = Some(input);
+        }
+
+        // Update
+        if e.update_args().is_some() {
+            if let Some(input) = current_frame_input {
+                recording.push((frame_count, input.into()));
+                if game.input(input) {
+                    return recording;
+                }
+                // Reset and wait for the next input.
+                current_frame_input = None;
             }
+            println!("[{}]-- update --", frame_count);
+            game.update();
+            frame_count += 1;
         }
 
         // Render
@@ -67,12 +84,6 @@ fn run(events: &mut Events, game: &mut Game) -> sim::Recording {
         }
         if let Some(r) = e.resize_args() {
             view.resize(r.window_size[0], r.window_size[1]);
-        }
-
-        // Update
-        if e.update_args().is_some() {
-            game.update();
-            frame_count += 1;
         }
     }
     return recording;
@@ -136,14 +147,21 @@ fn run_from_recoding(
     let mut idx: usize = 0;
 
     let mut frame_count: u64 = 0;
+    let mut current_frame_input: Option<game::Input> = None;
     while let Some(e) = events.next(&mut window) {
+        // I think this cannot go out of bounds because of the validation for 'q' above.
+        if current_frame_input.is_none() && inputs[idx].0 == frame_count {
+            current_frame_input = Some(inputs[idx].1);
+            idx += 1;
+        }
+
         if let Some(_) = e.update_args() {
-            // I think this cannot go out of bounds because of the validation for 'q' above.
-            if inputs[idx].0 == frame_count {
-                if game.input(inputs[idx].1) {
+            if let Some(input) = current_frame_input {
+                if game.input(input) {
                     return Ok(());
                 }
-                idx += 1;
+                // Reset and wait for the next input.
+                current_frame_input = None;
             }
             // Update
             game.update();
@@ -182,6 +200,9 @@ struct CliArgs {
 
     #[arg(long, default_value = "1.0")]
     playback_speed: f64,
+
+    #[arg(long, default_value = "recording.game.txt")]
+    recording_filepath: String,
 }
 
 fn main() {
@@ -201,18 +222,18 @@ fn main() {
     let mut events = Events::new(settings);
 
     if args.mode == AppMode::Replay && should_render {
-        let recording = sim::read_recording_from_file("recording.game.txt").unwrap();
+        let recording = sim::read_recording_from_file(&args.recording_filepath).unwrap();
         if let Err(e) = run_from_recoding(&mut events, &mut game, recording) {
             eprintln!("ERROR: {e}");
         }
     } else if args.mode == AppMode::Replay && !should_render {
-        let recording = sim::read_recording_from_file("recording.game.txt").unwrap();
+        let recording = sim::read_recording_from_file(&args.recording_filepath).unwrap();
         if let Err(e) = run_from_recording_nogui(&mut game, recording) {
             eprintln!("ERROR: {e}");
         }
     } else if args.mode == AppMode::Record && should_render {
         let recording = run(&mut events, &mut game);
-        sim::write_recording_to_file(&recording, "recording.game.txt").unwrap();
+        sim::write_recording_to_file(&recording, &args.recording_filepath).unwrap();
     } else {
         panic!("Invalid options");
     }
