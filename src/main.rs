@@ -18,7 +18,7 @@ use crate::view::View;
 
 const GL_VERSION: OpenGL = OpenGL::V4_5;
 /// Number of sequence the main loop should tick the game in gui mode.
-const UPDATE_HZ: u64 = 4;
+const UPDATE_HZ: u64 = 6;
 
 fn button_to_input(button: Button) -> game::Input {
     use game::Input;
@@ -36,6 +36,63 @@ fn button_to_input(button: Button) -> game::Input {
     }
 }
 
+fn try_parse_recording(recording: sim::Recording) -> Result<Vec<(u64, game::Input)>, String> {
+    // None-empty.
+    let last_input = recording.last().ok_or("Empty recording.".to_string())?;
+
+    // Finite.
+    if last_input.1 != 'q' {
+        return Err("This recording will never quite.".to_string());
+    }
+
+    // Valid data.
+    let mut inputs = Vec::<(u64, game::Input)>::new();
+    inputs.reserve(recording.len());
+    for (count, char) in &recording.clone() {
+        let input = game::Input::try_from(*char)?;
+        inputs.push((*count, input));
+    }
+
+    Ok(inputs)
+}
+
+struct Buffer<T: Clone + Copy> {
+    x: Option<T>,
+}
+
+impl<T: Clone + Copy> Buffer<T> {
+    fn new() -> Self {
+        Self { x: None }
+    }
+
+    fn is_empty(&self) -> bool {
+        self.x.is_none()
+    }
+
+    fn push(&mut self, most_recent_input: T) {
+        self.x = Some(most_recent_input);
+    }
+
+    fn pop(&mut self) -> Option<T> {
+        let input = self.x;
+        self.x = None;
+        input
+    }
+}
+
+fn maybe_render(e: &piston::Event, game: &Game, gl: &mut GlGraphics, view: &mut View) {
+    // Render
+    if let Some(r) = e.render_args() {
+        gl.draw(r.viewport(), |c, g| {
+            graphics::clear([0.0; 4], g);
+            view.draw(&game, &c, g);
+        })
+    }
+    if let Some(r) = e.resize_args() {
+        view.resize(r.window_size[0], r.window_size[1]);
+    }
+}
+
 fn run(events: &mut Events, game: &mut Game) -> sim::Recording {
     let mut recording = sim::Recording::new();
     const GL_VERSION: OpenGL = OpenGL::V4_5;
@@ -48,7 +105,7 @@ fn run(events: &mut Events, game: &mut Game) -> sim::Recording {
     let mut view = View::new();
 
     let mut frame_count: u64 = 0;
-    let mut current_frame_input: Option<game::Input> = None;
+    let mut input_source = Buffer::<game::Input>::new();
     while let Some(e) = events.next(&mut window) {
         // Input
         if let Some(button) = e.press_args() {
@@ -57,55 +114,36 @@ fn run(events: &mut Events, game: &mut Game) -> sim::Recording {
             // This will overwrite the previous input.
             // The previous input is potentially never used if there was no update call
             // below in the current frame.
-            current_frame_input = Some(input);
+            input_source.push(input);
         }
 
         // Update
         if e.update_args().is_some() {
-            if let Some(input) = current_frame_input {
+            if let Some(input) = input_source.pop() {
                 recording.push((frame_count, input.into()));
                 if game.input(input) {
                     return recording;
                 }
-                // Reset and wait for the next input.
-                current_frame_input = None;
             }
             println!("[{}]-- update --", frame_count);
             game.update();
             frame_count += 1;
         }
-
-        // Render
-        if let Some(r) = e.render_args() {
-            gl.draw(r.viewport(), |c, g| {
-                graphics::clear([0.0; 4], g);
-                view.draw(&game, &c, g);
-            })
-        }
-        if let Some(r) = e.resize_args() {
-            view.resize(r.window_size[0], r.window_size[1]);
-        }
+        maybe_render(&e, &game, &mut gl, &mut view);
     }
     return recording;
 }
 
 fn run_from_recording_nogui(game: &mut Game, recording: sim::Recording) -> Result<(), String> {
-    // Input Validation
-    let last_input = recording.last().ok_or("Empty recording.".to_string())?;
-    if last_input.1 != 'q' {
-        return Err("This recording will never quite.".to_string());
-    }
-
-    let mut inputs = Vec::<(u64, game::Input)>::new();
-    inputs.reserve(recording.len());
-    for (count, char) in &recording {
-        let input = game::Input::try_from(*char)?;
-        inputs.push((*count, input));
-    }
+    let inputs = try_parse_recording(recording)?;
+    let max_frame_count = inputs.last().unwrap().0;
 
     let mut idx = 0;
-    for frame_count in 0..last_input.0 {
-        // I think this cannot go out of bounds because of the validation for 'q' above.
+    for frame_count in 0..max_frame_count {
+        // I think this cannot go out of bounds because of the validation for 'q'
+        // in `try_parse_recording`.
+        assert!(idx < inputs.len());
+
         if inputs[idx].0 == frame_count {
             if game.input(inputs[idx].1) {
                 return Ok(());
@@ -128,55 +166,35 @@ fn run_from_recoding(
         .exit_on_esc(true)
         .build()
         .unwrap();
-
-    // Input Validation
-    let last_input = recording.last().ok_or("Empty recording.".to_string())?;
-    if last_input.1 != 'q' {
-        return Err("This recording will never quite.".to_string());
-    }
-
-    let mut inputs = Vec::<(u64, game::Input)>::new();
-    inputs.reserve(recording.len());
-    for (count, char) in &recording {
-        let input = game::Input::try_from(*char)?;
-        inputs.push((*count, input));
-    }
-
     let mut gl = GlGraphics::new(GL_VERSION);
     let mut view = View::new();
-    let mut idx: usize = 0;
+
+    let inputs = try_parse_recording(recording)?;
+    let mut idx_input: usize = 0;
 
     let mut frame_count: u64 = 0;
-    let mut current_frame_input: Option<game::Input> = None;
+    let mut input_source = Buffer::<game::Input>::new();
+
     while let Some(e) = events.next(&mut window) {
-        // I think this cannot go out of bounds because of the validation for 'q' above.
-        if current_frame_input.is_none() && inputs[idx].0 == frame_count {
-            current_frame_input = Some(inputs[idx].1);
-            idx += 1;
+        // I think this cannot go out of bounds because of the validation for 'q'
+        // in `try_parse_recording`.
+        assert!(idx_input < inputs.len());
+        // For the same reson we cannot run past the largest frame count.
+        assert!(frame_count < inputs.last().unwrap().0);
+
+        if input_source.is_empty() && inputs[idx_input].0 == frame_count {
+            input_source.push(inputs[idx_input].1);
+            idx_input += 1;
         }
 
         if let Some(_) = e.update_args() {
-            if let Some(input) = current_frame_input {
-                if game.input(input) {
-                    return Ok(());
-                }
-                // Reset and wait for the next input.
-                current_frame_input = None;
+            if game.input(input_source.pop().unwrap_or(game::Input::None)) {
+                return Ok(());
             }
-            // Update
             game.update();
             frame_count += 1;
         }
-        // Render
-        if let Some(r) = e.render_args() {
-            gl.draw(r.viewport(), |c, g| {
-                graphics::clear([0.0; 4], g);
-                view.draw(&game, &c, g);
-            })
-        }
-        if let Some(r) = e.resize_args() {
-            view.resize(r.window_size[0], r.window_size[1]);
-        }
+        maybe_render(&e, &game, &mut gl, &mut view);
     }
 
     Ok(())
@@ -239,4 +257,17 @@ fn main() {
     }
 
     println!("Recording finished. Score: {}", game.get_stats().score);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn run_example_recording() {
+        // We can use snapshot testing here!
+        let mut game = Game::new();
+        let recording = sim::read_recording_from_file("recording.game.txt").unwrap();
+        assert_eq!(run_from_recording_nogui(&mut game, recording), Ok(()));
+    }
 }
