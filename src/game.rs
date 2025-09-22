@@ -3,6 +3,8 @@ pub mod map;
 
 use std::convert::TryFrom;
 
+use crate::sim::RandGen;
+
 use self::map::Map;
 use self::map::Tile;
 use self::map::PU;
@@ -55,7 +57,7 @@ impl TryFrom<char> for Input {
     }
 }
 
-pub struct Game {
+pub struct Game<RG: RandGen + Default> {
     map: Map,
     lives: u8,
     score: u32,
@@ -67,6 +69,7 @@ pub struct Game {
     ghosts: Ghosts,
     ticks: u32,
     paused: bool,
+    rg: RG,
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -94,7 +97,7 @@ pub struct Stats {
     pub level: usize,
 }
 
-impl Game {
+impl<RG: RandGen + Default> Game<RG> {
     pub fn new() -> Self {
         Game::default()
     }
@@ -160,7 +163,9 @@ impl Game {
             return;
         }
         self.move_pacman();
-        self.move_ghosts();
+        self.ghosts
+            .move_ghosts(&self.map, (self.x, self.y, self.direction), &mut self.rg);
+
         match self.ghosts.interact_with_player((self.x, self.y)) {
             Some(Interaction::KillPlayer) => {
                 self.x = START_POS.0;
@@ -212,11 +217,6 @@ impl Game {
         }
     }
 
-    fn move_ghosts(&mut self) {
-        self.ghosts
-            .move_ghosts(&self.map, (self.x, self.y, self.direction));
-    }
-
     fn can_turn(&self) -> bool {
         let (x, y) = match self.direction_intent {
             Direction::Up => (self.x, self.y - 1),
@@ -264,7 +264,7 @@ impl Game {
     }
 }
 
-impl Default for Game {
+impl<RG: RandGen + Default> Default for Game<RG> {
     fn default() -> Self {
         Game {
             map: Map::new(),
@@ -278,18 +278,19 @@ impl Default for Game {
             ghosts: Ghosts::new(),
             ticks: 0,
             paused: false,
+            rg: RG::default(),
         }
     }
 }
 
 // // DEBUG VIEWS
-#[allow(dead_code)]
-impl Game {
-    pub fn ghost_targets(&self) -> [(i32, i32); 4] {
-        self.ghosts.targets((self.x, self.y, self.direction))
-    }
+// #[allow(dead_code)]
+// impl Game {
+//     pub fn ghost_targets(&self) -> [(i32, i32); 4] {
+//         self.ghosts.targets((self.x, self.y, self.direction))
+//     }
 
-    pub fn level_up(&mut self) {
-        self.map.remove_all_pellets();
-    }
-}
+//     pub fn level_up(&mut self) {
+//         self.map.remove_all_pellets();
+//     }
+// }

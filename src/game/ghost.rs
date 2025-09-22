@@ -1,5 +1,6 @@
 use super::map::{self, Map};
 use super::Direction;
+use crate::sim::RandGen;
 
 const BLINKY_HOME: (i32, i32) = (map::MAP_WIDTH as i32 - 3, -2);
 const PINKY_HOME: (i32, i32) = (2, -2);
@@ -65,16 +66,21 @@ impl Ghosts {
         self.frightened_timer = FRIGHTNED_TIMER;
     }
 
-    pub fn move_ghosts(&mut self, map: &Map, player: (i32, i32, Direction)) {
+    pub fn move_ghosts<RG: RandGen>(
+        &mut self,
+        map: &Map,
+        player: (i32, i32, Direction),
+        rg: &mut RG,
+    ) {
         let blinky = self.ghosts[0].pos;
         for g in self.ghosts.iter_mut() {
             if g.house_timer != 0 {
-                g.house_move(map);
+                g.house_move(map, rg);
                 continue;
             }
             let plr = (player.0, player.1);
             match self.ghost_mode {
-                GhostMode::Frightened => g.flee(map),
+                GhostMode::Frightened => g.flee(map, rg),
                 GhostMode::Chase => {
                     let target = match g.name {
                         Name::Blinky => plr,
@@ -198,13 +204,11 @@ impl Ghost {
         }
     }
 
-    fn flee(&mut self, map: &Map) {
+    fn flee<RG: RandGen>(&mut self, map: &Map, rg: &mut RG) {
         let mut options = self.get_options();
         options.retain(|opt| *opt != self.last_pos);
-        use rand::Rng;
-        let mut rng = rand::thread_rng();
         while !options.is_empty() {
-            let i = rng.gen::<usize>() % options.len();
+            let i = rg.rand() % options.len();
             let opt = options.swap_remove(i);
             if !map.is_wall(opt.0, opt.1) {
                 self.change_pos(opt);
@@ -213,13 +217,11 @@ impl Ghost {
         }
     }
 
-    fn house_move(&mut self, map: &Map) {
+    fn house_move<RG: RandGen>(&mut self, map: &Map, rg: &mut RG) {
         let mut options = self.get_options();
         options.retain(|opt| *opt != self.last_pos);
-        use rand::Rng;
-        let mut rng = rand::thread_rng();
         while !options.is_empty() {
-            let i = rng.gen::<usize>() % options.len();
+            let i = rg.rand() % options.len();
             let opt = options.swap_remove(i);
             if map.is_house(opt.0, opt.1) {
                 self.change_pos(opt);
@@ -281,19 +283,19 @@ fn calc_clyde_target(clyde: (i32, i32), plr: (i32, i32)) -> (i32, i32) {
     }
 }
 
-// DEBUG VIEWS
-#[allow(dead_code)]
-impl Ghosts {
-    pub fn targets(&self, plr: (i32, i32, Direction)) -> [(i32, i32); 4] {
-        match self.ghost_mode {
-            GhostMode::Chase => [
-                (plr.0, plr.1),
-                calc_pinky_target(plr),
-                calc_inky_target(self.ghosts[0].pos, plr),
-                calc_clyde_target(self.ghosts[3].pos, (plr.0, plr.1)),
-            ],
-            GhostMode::Scatter => [BLINKY_HOME, PINKY_HOME, INKY_HOME, CLYDE_HOME],
-            GhostMode::Frightened => [(300, 300), (300, 300), (300, 300), (300, 300)],
-        }
-    }
-}
+// // DEBUG VIEWS
+// #[allow(dead_code)]
+// impl Ghosts {
+//     pub fn targets(&self, plr: (i32, i32, Direction)) -> [(i32, i32); 4] {
+//         match self.ghost_mode {
+//             GhostMode::Chase => [
+//                 (plr.0, plr.1),
+//                 calc_pinky_target(plr),
+//                 calc_inky_target(self.ghosts[0].pos, plr),
+//                 calc_clyde_target(self.ghosts[3].pos, (plr.0, plr.1)),
+//             ],
+//             GhostMode::Scatter => [BLINKY_HOME, PINKY_HOME, INKY_HOME, CLYDE_HOME],
+//             GhostMode::Frightened => [(300, 300), (300, 300), (300, 300), (300, 300)],
+//         }
+//     }
+// }

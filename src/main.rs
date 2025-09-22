@@ -14,6 +14,7 @@ use piston::{Button, PressEvent, UpdateEvent};
 use clap::{Parser, ValueEnum};
 
 use crate::game::Game;
+use crate::sim::RandGen;
 use crate::view::View;
 
 const GL_VERSION: OpenGL = OpenGL::V4_5;
@@ -80,7 +81,24 @@ impl<T: Clone + Copy> Buffer<T> {
     }
 }
 
-fn maybe_render(e: &piston::Event, game: &Game, gl: &mut GlGraphics, view: &mut View) {
+#[derive(Debug, Default)]
+struct NotRandom {
+    x: usize,
+}
+
+impl RandGen for NotRandom {
+    fn rand(&mut self) -> usize {
+        self.x += 1;
+        self.x
+    }
+}
+
+fn maybe_render<RG: RandGen + Default>(
+    e: &piston::Event,
+    game: &Game<RG>,
+    gl: &mut GlGraphics,
+    view: &mut View,
+) {
     // Render
     if let Some(r) = e.render_args() {
         gl.draw(r.viewport(), |c, g| {
@@ -93,7 +111,7 @@ fn maybe_render(e: &piston::Event, game: &Game, gl: &mut GlGraphics, view: &mut 
     }
 }
 
-fn run(events: &mut Events, game: &mut Game) -> sim::Recording {
+fn run<RG: RandGen + Default>(events: &mut Events, game: &mut Game<RG>) -> sim::Recording {
     let mut recording = sim::Recording::new();
     const GL_VERSION: OpenGL = OpenGL::V4_5;
     let mut window: Window = WindowSettings::new("pacman-game", [750, 750])
@@ -134,7 +152,10 @@ fn run(events: &mut Events, game: &mut Game) -> sim::Recording {
     return recording;
 }
 
-fn run_from_recording_nogui(game: &mut Game, recording: sim::Recording) -> Result<(), String> {
+fn run_from_recording_nogui<RG: RandGen + Default>(
+    game: &mut Game<RG>,
+    recording: sim::Recording,
+) -> Result<(), String> {
     let inputs = try_parse_recording(recording)?;
     let max_frame_count = inputs.last().unwrap().0;
 
@@ -156,9 +177,9 @@ fn run_from_recording_nogui(game: &mut Game, recording: sim::Recording) -> Resul
     Ok(())
 }
 
-fn run_from_recoding(
+fn run_from_recoding<RG: RandGen + Default>(
     events: &mut Events,
-    game: &mut Game,
+    game: &mut Game<RG>,
     recording: sim::Recording,
 ) -> Result<(), String> {
     let mut window: Window = WindowSettings::new("pacman-game", [750, 750])
@@ -233,7 +254,7 @@ fn main() {
 
     let should_render = !args.nogui;
 
-    let mut game = Game::new();
+    let mut game = Game::<NotRandom>::new();
     let mut settings = EventSettings::new();
     // settings.bench_mode = true;
     settings.ups = (UPDATE_HZ as f64 * args.playback_speed) as u64;
@@ -266,7 +287,7 @@ mod tests {
     #[test]
     fn run_example_recording() {
         // We can use snapshot testing here!
-        let mut game = Game::new();
+        let mut game = Game::<NotRandom>::new();
         let recording = sim::read_recording_from_file("recording.game.txt").unwrap();
         assert_eq!(run_from_recording_nogui(&mut game, recording), Ok(()));
     }

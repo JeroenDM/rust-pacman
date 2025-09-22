@@ -1,6 +1,7 @@
 use crate::game::map::{Tile, MAP_HEIGHT, MAP_WIDTH, PU};
 use crate::game::Direction;
 use crate::game::Game;
+use crate::sim::RandGen;
 use graphics::{circle_arc::CircleArc, image::Image, rectangle::Rectangle, types::Color, Context};
 use opengl_graphics::GlGraphics;
 use opengl_graphics::Texture;
@@ -95,7 +96,12 @@ impl View {
         self.y_offset = self.tile_size * 2.0;
     }
 
-    pub fn draw(&self, controler: &Game, c: &Context, g: &mut GlGraphics) {
+    pub fn draw<RG: RandGen + Default>(
+        &self,
+        controler: &Game<RG>,
+        c: &Context,
+        g: &mut GlGraphics,
+    ) {
         let offset = |mut a: [f64; 4]| {
             a[0] += self.x_offset;
             a[1] += self.y_offset;

@@ -1,6 +1,10 @@
 use std::fs::File;
 use std::io::{self, BufRead, BufReader, BufWriter, Write};
 
+pub trait RandGen {
+    fn rand(&mut self) -> usize;
+}
+
 pub type Recording = Vec<(u64, char)>;
 
 pub fn write_recording_to_file(recording: &Recording, filename: &str) -> io::Result<()> {
