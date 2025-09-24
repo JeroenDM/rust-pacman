@@ -1,4 +1,4 @@
-use crate::game::map::{Tile, MAP_HEIGHT, MAP_WIDTH, PU};
+use crate::game::map::{Tile, MAP_HEIGHT, MAP_WIDTH};
 use crate::game::Direction;
 use crate::game::Game;
 use crate::sim::RandGen;
@@ -121,7 +121,7 @@ impl View {
                         ]);
                         Rectangle::new(self.wall_color).draw(sqr, &c.draw_state, c.transform, g);
                     }
-                    Tile::NotWall(PU::Dot) => {
+                    Tile::Dot => {
                         let sqr = offset([
                             x + self.tile_size * (5.0 / 12.0),
                             y + self.tile_size * (5.0 / 12.0),
@@ -130,7 +130,7 @@ impl View {
                         ]);
                         Rectangle::new(self.dot_color).draw(sqr, &c.draw_state, c.transform, g);
                     }
-                    Tile::NotWall(PU::PowerUp) => {
+                    Tile::PowerUp => {
                         let sqr = offset([
                             x + self.tile_size * (3.0 / 8.0),
                             y + self.tile_size * (3.0 / 8.0),

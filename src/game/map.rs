@@ -1,5 +1,3 @@
-pub const MAP_WIDTH: usize = 28;
-pub const MAP_HEIGHT: usize = 31;
 const MAP_STR: [&'static str; 31] = [
     "############################",
     "#............##............#",
@@ -33,6 +31,8 @@ const MAP_STR: [&'static str; 31] = [
     "#..........................#",
     "############################",
 ];
+pub const MAP_WIDTH: usize = MAP_STR[0].len();
+pub const MAP_HEIGHT: usize = MAP_STR.len();
 
 fn pellet_coords() -> Vec<(usize, usize)> {
     MAP_STR
@@ -60,15 +60,21 @@ pub struct Map {
 #[derive(Clone, Copy)]
 pub enum Tile {
     Wall,
-    NotWall(PU),
     House,
-}
-
-#[derive(Clone, Copy)]
-pub enum PU {
     Dot,
     PowerUp,
     Empty,
+}
+
+fn tile_from_char(c: char) -> Option<Tile> {
+    match c {
+        '#' => Some(Tile::Wall),
+        '.' => Some(Tile::Dot),
+        ' ' => Some(Tile::Empty),
+        'X' => Some(Tile::PowerUp),
+        'H' => Some(Tile::House),
+        _ => None,
+    }
 }
 
 impl Map {
@@ -86,10 +92,12 @@ impl Map {
         }
     }
 
+    // TODO: rename this
     pub fn is_wall(&self, x: i32, y: i32) -> bool {
         match self.get(x, y) {
-            Some(Tile::NotWall(_)) => false,
-            _ => true,
+            Some(Tile::Wall) => true,
+            Some(Tile::House) => true,
+            _ => false,
         }
     }
 
@@ -106,10 +114,10 @@ impl Map {
     }
 
     pub fn consume(&mut self, x: i32, y: i32) {
-        if let Some(Tile::NotWall(PU::Dot)) = self.get(x, y) {
+        if let Some(Tile::Dot) = self.get(x, y) {
             self.pellets -= 1;
         };
-        self.set(x as u32, y as u32, Tile::NotWall(PU::Empty));
+        self.set(x as u32, y as u32, Tile::Empty);
     }
 
     pub fn scan_lines(&self) -> ScanLine<'_> {
@@ -125,7 +133,7 @@ impl Map {
 
     pub fn reset(&mut self) {
         for (x, y) in self.pellet_coords.iter().cloned() {
-            self.tiles[MAP_WIDTH * y + x] = Tile::NotWall(PU::Dot);
+            self.tiles[MAP_WIDTH * y + x] = Tile::Dot;
         }
         self.pellets = self.pellet_coords.len() as u32;
     }
@@ -136,28 +144,17 @@ impl Default for Map {
         let map: Vec<Tile> = MAP_STR
             .iter()
             .flat_map(|x| x.chars())
-            .filter_map(|c| match c {
-                '#' => Some(Tile::Wall),
-                '.' => Some(Tile::NotWall(PU::Dot)),
-                ' ' => Some(Tile::NotWall(PU::Empty)),
-                'X' => Some(Tile::NotWall(PU::PowerUp)),
-                'H' => Some(Tile::House),
-                _ => None,
-            })
+            .filter_map(tile_from_char)
             .collect();
-        let mut m = [Tile::NotWall(PU::Empty); MAP_WIDTH * MAP_HEIGHT];
+        assert_eq!(map.len(), MAP_WIDTH * MAP_HEIGHT);
+        let mut m = [Tile::Empty; MAP_WIDTH * MAP_HEIGHT];
+        m.copy_from_slice(&map);
         for i in 0..map.len() {
             m[i] = map[i];
         }
         let n_pellets = map
             .iter()
-            .filter(|c| {
-                if let Tile::NotWall(PU::Dot) = c {
-                    true
-                } else {
-                    false
-                }
-            })
+            .filter(|c| if let Tile::Dot = c { true } else { false })
             .count() as u32;
         Map {
             tiles: m,

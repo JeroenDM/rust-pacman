@@ -7,7 +7,6 @@ use crate::sim::RandGen;
 
 use self::map::Map;
 use self::map::Tile;
-use self::map::PU;
 
 use self::ghost::{Ghost, GhostMode, Ghosts, Interaction};
 
@@ -189,6 +188,10 @@ impl<RG: RandGen + Default> Game<RG> {
             Direction::Left => (self.x - 1, self.y),
             Direction::Right => (self.x + 1, self.y),
         };
+        if !self.map.is_wall(x, y) {
+            self.x = x;
+            self.y = y;
+        }
         match self.map.get(x, y) {
             None => {
                 if x == -1 {
@@ -197,21 +200,15 @@ impl<RG: RandGen + Default> Game<RG> {
                     self.x = 0;
                 }
             }
-            Some(Tile::NotWall(pu)) => {
-                self.x = x;
-                self.y = y;
-                match pu {
-                    PU::Empty => (),
-                    PU::Dot => {
-                        self.map.consume(x, y);
-                        self.score += SCORE_PELLET;
-                    }
-                    PU::PowerUp => {
-                        self.map.consume(x, y);
-                        self.ghosts.frighten();
-                        self.score += SCORE_PU;
-                    }
-                }
+            Some(Tile::Empty) => (),
+            Some(Tile::Dot) => {
+                self.map.consume(x, y);
+                self.score += SCORE_PELLET;
+            }
+            Some(Tile::PowerUp) => {
+                self.map.consume(x, y);
+                self.ghosts.frighten();
+                self.score += SCORE_PU;
             }
             _ => (),
         }

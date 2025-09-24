@@ -32,6 +32,7 @@ Also implement ghost ai with bt?
 How to abstract over the input source, aka easily switch between recording or keyboard input,
 without duplicating the whole piston event loop?
 
+Make it work for different maps and map sizes.
 
 
 ## Injecting random numbers
