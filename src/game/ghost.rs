@@ -162,11 +162,13 @@ pub struct Ghost {
 
 impl Ghost {
     fn new(name: Name) -> Self {
+        let x_mid = (map::MAP_WIDTH / 2) as i32;
+        let y_mid = (map::MAP_HEIGHT / 2) as i32;
         let start_p = match name {
-            Name::Blinky => (15, 15),
-            Name::Pinky => (15, 14),
-            Name::Inky => (14, 15),
-            Name::Clyde => (14, 14),
+            Name::Blinky => (x_mid, y_mid),
+            Name::Pinky => (x_mid, y_mid - 1),
+            Name::Inky => (x_mid - 1, y_mid),
+            Name::Clyde => (x_mid - 1, y_mid - 1),
         };
         Ghost {
             pos: start_p,

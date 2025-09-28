@@ -14,7 +14,7 @@ use piston::{Button, PressEvent, UpdateEvent};
 use clap::{Parser, ValueEnum};
 
 use crate::game::Game;
-use crate::sim::RandGen;
+use crate::sim::{FileLoader, RandGen, Simulator};
 use crate::view::View;
 
 const GL_VERSION: OpenGL = OpenGL::V4_5;
@@ -82,18 +82,36 @@ impl<T: Clone + Copy> Buffer<T> {
 }
 
 #[derive(Debug, Default)]
-struct NotRandom {
+struct Sim1 {
     x: usize,
 }
 
-impl RandGen for NotRandom {
+impl RandGen for Sim1 {
     fn rand(&mut self) -> usize {
         self.x += 1;
         self.x
     }
 }
 
-fn maybe_render<RG: RandGen + Default>(
+impl FileLoader for Sim1 {
+    fn load_file(&mut self, _filename: &str) -> String {
+        let map = r#"############################
+            #................X.........#
+            #..........................#
+            #..........................#
+            #..........................#
+            #..............X.X.........#
+            #..........................#
+            #..........................#
+            #..........................#
+            ############################"#;
+        return map.to_string();
+    }
+}
+
+impl Simulator for Sim1 {}
+
+fn maybe_render<RG: Simulator>(
     e: &piston::Event,
     game: &Game<RG>,
     gl: &mut GlGraphics,
@@ -111,7 +129,7 @@ fn maybe_render<RG: RandGen + Default>(
     }
 }
 
-fn run<RG: RandGen + Default>(events: &mut Events, game: &mut Game<RG>) -> sim::Recording {
+fn run<RG: Simulator>(events: &mut Events, game: &mut Game<RG>) -> sim::Recording {
     let mut recording = sim::Recording::new();
     const GL_VERSION: OpenGL = OpenGL::V4_5;
     let mut window: Window = WindowSettings::new("pacman-game", [750, 750])
@@ -152,7 +170,7 @@ fn run<RG: RandGen + Default>(events: &mut Events, game: &mut Game<RG>) -> sim::
     return recording;
 }
 
-fn run_from_recording_nogui<RG: RandGen + Default>(
+fn run_from_recording_nogui<RG: Simulator>(
     game: &mut Game<RG>,
     recording: sim::Recording,
 ) -> Result<(), String> {
@@ -177,7 +195,7 @@ fn run_from_recording_nogui<RG: RandGen + Default>(
     Ok(())
 }
 
-fn run_from_recoding<RG: RandGen + Default>(
+fn run_from_recoding<RG: Simulator>(
     events: &mut Events,
     game: &mut Game<RG>,
     recording: sim::Recording,
@@ -254,7 +272,7 @@ fn main() {
 
     let should_render = !args.nogui;
 
-    let mut game = Game::<NotRandom>::new();
+    let mut game = Game::<Sim1>::new();
     let mut settings = EventSettings::new();
     // settings.bench_mode = true;
     settings.ups = (UPDATE_HZ as f64 * args.playback_speed) as u64;
@@ -287,7 +305,7 @@ mod tests {
     #[test]
     fn run_example_recording() {
         // We can use snapshot testing here!
-        let mut game = Game::<NotRandom>::new();
+        let mut game = Game::<Sim1>::new();
         let recording = sim::read_recording_from_file("recording.game.txt").unwrap();
         assert_eq!(run_from_recording_nogui(&mut game, recording), Ok(()));
     }

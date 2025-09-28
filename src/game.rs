@@ -3,14 +3,14 @@ pub mod map;
 
 use std::convert::TryFrom;
 
-use crate::sim::RandGen;
+use crate::sim::Simulator;
 
 use self::map::Map;
 use self::map::Tile;
 
 use self::ghost::{Ghost, GhostMode, Ghosts, Interaction};
 
-const START_POS: (i32, i32) = (14, 23);
+const START_POS: (i32, i32) = ((map::MAP_WIDTH - 2) as i32, (map::MAP_HEIGHT - 2) as i32);
 const SCORE_PELLET: u32 = 10;
 const SCORE_PU: u32 = 50;
 const SCORE_GHOST: u32 = 200;
@@ -56,7 +56,7 @@ impl TryFrom<char> for Input {
     }
 }
 
-pub struct Game<RG: RandGen + Default> {
+pub struct Game<RG: Simulator> {
     map: Map,
     lives: u8,
     score: u32,
@@ -96,7 +96,7 @@ pub struct Stats {
     pub level: usize,
 }
 
-impl<RG: RandGen + Default> Game<RG> {
+impl<RG: Simulator> Game<RG> {
     pub fn new() -> Self {
         Game::default()
     }
@@ -261,8 +261,11 @@ impl<RG: RandGen + Default> Game<RG> {
     }
 }
 
-impl<RG: RandGen + Default> Default for Game<RG> {
+impl<RG: Simulator> Default for Game<RG> {
     fn default() -> Self {
+        let mut sim = RG::default();
+        let map_file = sim.load_file("map.txt");
+
         Game {
             map: Map::new(),
             lives: 5,
@@ -275,7 +278,7 @@ impl<RG: RandGen + Default> Default for Game<RG> {
             ghosts: Ghosts::new(),
             ticks: 0,
             paused: false,
-            rg: RG::default(),
+            rg: sim,
         }
     }
 }

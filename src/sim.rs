@@ -5,6 +5,12 @@ pub trait RandGen {
     fn rand(&mut self) -> usize;
 }
 
+pub trait FileLoader {
+    fn load_file(&mut self, filename: &str) -> String;
+}
+
+pub trait Simulator: RandGen + FileLoader + Default {}
+
 pub type Recording = Vec<(u64, char)>;
 
 pub fn write_recording_to_file(recording: &Recording, filename: &str) -> io::Result<()> {
