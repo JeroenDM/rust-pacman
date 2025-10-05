@@ -10,10 +10,19 @@ use self::map::Tile;
 
 use self::ghost::{Ghost, GhostMode, Ghosts, Interaction};
 
-const START_POS: (i32, i32) = ((map::MAP_WIDTH - 2) as i32, (map::MAP_HEIGHT - 2) as i32);
+// const START_POS: (i32, i32) = ((map::MAP_WIDTH - 2) as i32, (map::MAP_HEIGHT - 2) as i32);
+
+// Parameters
 const SCORE_PELLET: u32 = 10;
 const SCORE_PU: u32 = 50;
 const SCORE_GHOST: u32 = 200;
+
+/// Constants that do not change while the game is running.
+#[derive(Debug, Clone, Copy)]
+pub struct Parameters {
+    pub start_pos: (i32, i32),
+    pub start_dir: Direction,
+}
 
 #[derive(Debug, Clone, Copy)]
 pub enum Input {
@@ -57,6 +66,7 @@ impl TryFrom<char> for Input {
 }
 
 pub struct Game<RG: Simulator> {
+    params: Parameters,
     map: Map,
     lives: u8,
     score: u32,
@@ -97,8 +107,25 @@ pub struct Stats {
 }
 
 impl<RG: Simulator> Game<RG> {
-    pub fn new() -> Self {
-        Game::default()
+    pub fn new(params: Parameters, sim: RG) -> Self {
+        // let mut sim = RG::default();
+        // let map_file = sim.load_file("map.txt");
+
+        Game {
+            params,
+            map: Map::new(),
+            lives: 5,
+            score: 0,
+            level: 1,
+            x: params.start_pos.0,
+            y: params.start_pos.1,
+            direction: params.start_dir,
+            direction_intent: params.start_dir,
+            ghosts: Ghosts::new(),
+            ticks: 0,
+            paused: false,
+            rg: sim,
+        }
     }
 
     pub fn input(&mut self, input: Input) -> bool {
@@ -167,8 +194,9 @@ impl<RG: Simulator> Game<RG> {
 
         match self.ghosts.interact_with_player((self.x, self.y)) {
             Some(Interaction::KillPlayer) => {
-                self.x = START_POS.0;
-                self.y = START_POS.1;
+                self.x = self.params.start_pos.0;
+                self.y = self.params.start_pos.1;
+                // Do we also want to set start direction here?
                 self.lives -= 1;
             }
             Some(Interaction::KillGhost(n)) => {
@@ -230,8 +258,8 @@ impl<RG: Simulator> Game<RG> {
 
     fn advance_level(&mut self) {
         self.level += 1;
-        self.x = START_POS.0;
-        self.y = START_POS.1;
+        self.x = self.params.start_pos.0;
+        self.y = self.params.start_pos.1;
         self.ghosts.reset();
         self.map.reset();
     }
@@ -257,28 +285,6 @@ impl<RG: Simulator> Game<RG> {
             lives: self.lives,
             score: self.score,
             level: self.level,
-        }
-    }
-}
-
-impl<RG: Simulator> Default for Game<RG> {
-    fn default() -> Self {
-        let mut sim = RG::default();
-        let map_file = sim.load_file("map.txt");
-
-        Game {
-            map: Map::new(),
-            lives: 5,
-            score: 0,
-            level: 1,
-            x: START_POS.0,
-            y: START_POS.1,
-            direction: Direction::Left,
-            direction_intent: Direction::Left,
-            ghosts: Ghosts::new(),
-            ticks: 0,
-            paused: false,
-            rg: sim,
         }
     }
 }

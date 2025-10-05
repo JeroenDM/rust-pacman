@@ -13,7 +13,7 @@ use piston::{Button, PressEvent, UpdateEvent};
 
 use clap::{Parser, ValueEnum};
 
-use crate::game::Game;
+use crate::game::{Game, Parameters};
 use crate::sim::{FileLoader, RandGen, Simulator};
 use crate::view::View;
 
@@ -272,7 +272,13 @@ fn main() {
 
     let should_render = !args.nogui;
 
-    let mut game = Game::<Sim1>::new();
+    let state_init = Parameters {
+        start_pos: (26, 8),
+        start_dir: game::Direction::Left,
+    };
+
+    let sim = Sim1::default();
+    let mut game = Game::new(state_init, sim);
     let mut settings = EventSettings::new();
     // settings.bench_mode = true;
     settings.ups = (UPDATE_HZ as f64 * args.playback_speed) as u64;
@@ -305,7 +311,12 @@ mod tests {
     #[test]
     fn run_example_recording() {
         // We can use snapshot testing here!
-        let mut game = Game::<Sim1>::new();
+        let sim = Sim1::default();
+        let state_init = Parameters {
+            start_pos: (26, 8),
+            start_dir: game::Direction::Left,
+        };
+        let mut game = Game::new(state_init, sim);
         let recording = sim::read_recording_from_file("recording.game.txt").unwrap();
         assert_eq!(run_from_recording_nogui(&mut game, recording), Ok(()));
     }
