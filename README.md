@@ -26,6 +26,10 @@ After working on it for a couple of hours it became clear that this turned more 
 
 Specifically for deterministic simulation testing, it is useful to take this into account from the start. This avoids a bunch of refactoring to get it to work nicely. Maybe I can build a simple game from scratch, or look at [another pacman implementation](https://github.com/Warhorst/pacman) and try the same.
 
+Other cool things I want to try:
+
+- [Quake 3 event system](https://youtu.be/NeLkxuzCssA)
+- [Hot reloading](https://www.youtube.com/watch?v=WMSBRk5WG58)
 
 ---
 
