@@ -306,7 +306,7 @@ mod tests {
     fn run_example_recording() {
         // We can use snapshot testing here!
         let mut game = Game::<Sim1>::new();
-        let recording = sim::read_recording_from_file("recording.game.txt").unwrap();
+        let recording = sim::read_recording_from_file("test_game_file.txt").unwrap();
         assert_eq!(run_from_recording_nogui(&mut game, recording), Ok(()));
     }
 }
