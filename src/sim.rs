@@ -5,9 +5,8 @@ pub trait RandGen {
     fn rand(&mut self) -> usize;
 }
 
-#[allow(dead_code)]
 pub trait FileLoader {
-    fn load_file(&mut self, filename: &str) -> String;
+    fn load_file(&mut self, filename: &str) -> Vec<Vec<char>>;
 }
 
 pub trait Simulator: RandGen + FileLoader + Default {}

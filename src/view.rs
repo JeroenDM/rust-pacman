@@ -1,4 +1,4 @@
-use crate::game::map::{Tile, MAP_HEIGHT, MAP_WIDTH};
+use crate::game::map::Tile;
 use crate::game::Direction;
 use crate::game::Game;
 use crate::sim::Simulator;
@@ -89,14 +89,14 @@ impl View {
         }
     }
 
-    pub fn resize(&mut self, x: f64, y: f64) {
-        self.tile_size = y / (MAP_HEIGHT + 6) as f64;
-        let blankspace = x - (MAP_WIDTH as f64 * self.tile_size);
+    pub fn resize(&mut self, x: f64, y: f64, map_width: usize, map_height: usize) {
+        self.tile_size = y / (map_height + 6) as f64;
+        let blankspace = x - (map_width as f64 * self.tile_size);
         self.x_offset = blankspace / 2.0;
         self.y_offset = self.tile_size * 2.0;
     }
 
-    pub fn draw<RG: Simulator>(&self, controler: &Game<RG>, c: &Context, g: &mut GlGraphics) {
+    pub fn draw<RG: Simulator>(&self, game: &Game<RG>, c: &Context, g: &mut GlGraphics) {
         let offset = |mut a: [f64; 4]| {
             a[0] += self.x_offset;
             a[1] += self.y_offset;
@@ -104,7 +104,7 @@ impl View {
         };
         let mut x = 0.0;
         let mut y = 0.0;
-        for line in controler.get_map().scan_lines() {
+        for line in game.get_map().scan_lines() {
             for tile in line.iter() {
                 match tile {
                     Tile::Wall => {
@@ -147,7 +147,7 @@ impl View {
             x = 0.0;
         }
 
-        let stats = controler.get_stats();
+        let stats = game.get_stats();
         {
             // Stats
             let mut sc = stats.score;
@@ -160,7 +160,8 @@ impl View {
             while sc > 0 {
                 let d = sc % 10;
                 let sq = offset([
-                    (MAP_WIDTH / 2) as f64 * self.tile_size + i as f64 * self.tile_size * 1.702,
+                    (game.map().width / 2) as f64 * self.tile_size
+                        + i as f64 * self.tile_size * 1.702,
                     self.tile_size * -2.0,
                     self.tile_size,
                     self.tile_size * 1.702,
@@ -178,7 +179,7 @@ impl View {
             for i in 0..stats.lives {
                 Image::new()
                     .rect(offset(
-                        self.entity_sq(i as i32 * 2, (MAP_HEIGHT + 1) as i32),
+                        self.entity_sq(i as i32 * 2, (game.map().height + 1) as i32),
                     ))
                     .draw(&self.pacmans[3], &c.draw_state, c.transform, g);
             }
@@ -191,8 +192,8 @@ impl View {
                 .for_each(|(i, t)| {
                     Image::new()
                         .rect(offset(self.entity_sq(
-                            (MAP_WIDTH - i - 1) as i32,
-                            (MAP_HEIGHT + 1) as i32,
+                            (game.map().width - i - 1) as i32,
+                            (game.map().height + 1) as i32,
                         )))
                         .draw(t, &c.draw_state, c.transform, g)
                 });
@@ -200,7 +201,7 @@ impl View {
 
         if stats.lives > 0 {
             // pacman
-            let (x, y, d) = controler.get_player();
+            let (x, y, d) = game.get_player();
             let pac_texture = match d {
                 Direction::Up => &self.pacmans[0],
                 Direction::Right => &self.pacmans[1],
@@ -216,14 +217,14 @@ impl View {
         }
 
         let pick_color = |c| {
-            if controler.frightened() {
+            if game.frightened() {
                 &self.frightened
             } else {
                 c
             }
         };
 
-        for (i, ghost) in controler.get_ghosts().iter().enumerate() {
+        for (i, ghost) in game.get_ghosts().iter().enumerate() {
             Image::new()
                 .rect(offset(self.entity_sq(ghost.x(), ghost.y())))
                 .draw(

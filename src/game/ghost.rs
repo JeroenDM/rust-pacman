@@ -1,11 +1,16 @@
-use super::map::{self, Map};
+use super::map::Map;
 use super::Direction;
 use crate::sim::RandGen;
 
-const BLINKY_HOME: (i32, i32) = (map::MAP_WIDTH as i32 - 3, -2);
-const PINKY_HOME: (i32, i32) = (2, -2);
-const INKY_HOME: (i32, i32) = (map::MAP_WIDTH as i32 - 1, map::MAP_HEIGHT as i32);
-const CLYDE_HOME: (i32, i32) = (0, map::MAP_HEIGHT as i32);
+// const BLINKY_HOME: (i32, i32) = (map::MAP_WIDTH as i32 - 3, -2);
+// const PINKY_HOME: (i32, i32) = (2, -2);
+// const INKY_HOME: (i32, i32) = (map::MAP_WIDTH as i32 - 1, map::MAP_HEIGHT as i32);
+// const CLYDE_HOME: (i32, i32) = (0, map::MAP_HEIGHT as i32);
+
+const BLINKY_HOME: (i32, i32) = (2, 2);
+const PINKY_HOME: (i32, i32) = (2, 2);
+const INKY_HOME: (i32, i32) = (2, 2);
+const CLYDE_HOME: (i32, i32) = (2, 2);
 const FRIGHTNED_TIMER: u16 = 30;
 const GHOST_MODE_TIMER: u16 = 7 * 4;
 
@@ -39,12 +44,13 @@ pub struct Ghosts {
 
 impl Ghosts {
     pub fn new() -> Self {
+        let (x, y) = (13, 4); // TODO get this from the map.
         Ghosts {
             ghosts: [
-                Ghost::new(Name::Blinky),
-                Ghost::new(Name::Pinky),
-                Ghost::new(Name::Inky),
-                Ghost::new(Name::Clyde),
+                Ghost::new(Name::Blinky, (x, y), 2),
+                Ghost::new(Name::Pinky, (x, y - 1), 10),
+                Ghost::new(Name::Inky, (x - 1, y), 20),
+                Ghost::new(Name::Clyde, (x - 1, y - 1), 30),
             ],
             ghost_mode: GhostMode::Chase,
             mode_timer: 0,
@@ -125,7 +131,7 @@ impl Ghosts {
             let mut killed = 0;
             for g in self.ghosts.iter_mut() {
                 if g.pos == plr || g.last_pos == plr {
-                    *g = Ghost::new(g.name);
+                    *g = Ghost::new(g.name, (1, 1), 10); // TODO pass right values from params
                     killed += 1;
                 }
             }
@@ -161,24 +167,23 @@ pub struct Ghost {
 }
 
 impl Ghost {
-    fn new(name: Name) -> Self {
-        let x_mid = (map::MAP_WIDTH / 2) as i32;
-        let y_mid = (map::MAP_HEIGHT / 2) as i32;
-        let start_p = match name {
-            Name::Blinky => (x_mid, y_mid),
-            Name::Pinky => (x_mid, y_mid - 1),
-            Name::Inky => (x_mid - 1, y_mid),
-            Name::Clyde => (x_mid - 1, y_mid - 1),
-        };
+    fn new(name: Name, pos: (i32, i32), house_timer: u16) -> Self {
+        // let start_p = match name {
+        //     Name::Blinky => (x_mid, y_mid),
+        //     Name::Pinky => (x_mid, y_mid - 1),
+        //     Name::Inky => (x_mid - 1, y_mid),
+        //     Name::Clyde => (x_mid - 1, y_mid - 1),
+        // };
         Ghost {
-            pos: start_p,
+            pos,
             last_pos: (i32::min_value(), i32::min_value()),
-            house_timer: match name {
-                Name::Blinky => 2,
-                Name::Pinky => 10,
-                Name::Inky => 20,
-                Name::Clyde => 30,
-            },
+            // house_timer: match name {
+            //     Name::Blinky => 2,
+            //     Name::Pinky => 10,
+            //     Name::Inky => 20,
+            //     Name::Clyde => 30,
+            // },
+            house_timer,
             name,
         }
     }
@@ -195,7 +200,7 @@ impl Ghost {
         if map.is_house(self.pos.0, self.pos.1) {
             target = (13, 11); // (14, 11)
         }
-        let options = self.get_options();
+        let options = self.get_options(map.width);
         let decision = options
             .iter()
             .filter(|opt| **opt != self.last_pos)
@@ -207,7 +212,7 @@ impl Ghost {
     }
 
     fn flee<RG: RandGen>(&mut self, map: &Map, rg: &mut RG) {
-        let mut options = self.get_options();
+        let mut options = self.get_options(map.width);
         options.retain(|opt| *opt != self.last_pos);
         while !options.is_empty() {
             let i = rg.rand() % options.len();
@@ -220,7 +225,7 @@ impl Ghost {
     }
 
     fn house_move<RG: RandGen>(&mut self, map: &Map, rg: &mut RG) {
-        let mut options = self.get_options();
+        let mut options = self.get_options(map.width);
         options.retain(|opt| *opt != self.last_pos);
         while !options.is_empty() {
             let i = rg.rand() % options.len();
@@ -238,11 +243,11 @@ impl Ghost {
         self.pos = to;
     }
 
-    fn get_options(&self) -> Vec<(i32, i32)> {
+    fn get_options(&self, map_width: usize) -> Vec<(i32, i32)> {
         let wrap = |x| {
             if x < 0 {
-                map::MAP_WIDTH as i32 - 1
-            } else if x == map::MAP_WIDTH as i32 {
+                map_width as i32 - 1
+            } else if x == map_width as i32 {
                 0
             } else {
                 x

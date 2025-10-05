@@ -107,13 +107,13 @@ pub struct Stats {
 }
 
 impl<RG: Simulator> Game<RG> {
-    pub fn new(params: Parameters, sim: RG) -> Self {
+    pub fn new(params: Parameters, mut sim: RG) -> Self {
         // let mut sim = RG::default();
-        // let map_file = sim.load_file("map.txt");
+        let map_file = sim.load_file("map.txt");
 
         Game {
             params,
-            map: Map::new(),
+            map: Map::new(map_file),
             lives: 5,
             score: 0,
             level: 1,
@@ -223,8 +223,8 @@ impl<RG: Simulator> Game<RG> {
         match self.map.get(x, y) {
             None => {
                 if x == -1 {
-                    self.x = map::MAP_WIDTH as i32 - 1;
-                } else if x == map::MAP_WIDTH as i32 {
+                    self.x = self.map.width as i32 - 1;
+                } else if x == self.map.width as i32 {
                     self.x = 0;
                 }
             }

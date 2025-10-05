@@ -1,61 +1,24 @@
-// const MAP_STR: [&'static str; 31] = [
+// const MAP_STR: [&'static str; 10] = [
 //     "############################",
-//     "#............##............#",
-//     "#.####.#####.##.#####.####.#",
-//     "#X####.#####.##.#####.####X#",
-//     "#.####.#####.##.#####.####.#",
-//     "#..........................#",
-//     "#.####.##.########.##.####.#",
-//     "#.####.##.########.##.####.#",
-//     "#......##....##....##......#",
-//     "######.##### ## #####.######",
-//     "######.##### ## #####.######",
-//     "######.##          ##.######",
-//     "######.## ###HH### ##.######",
-//     "######.## #HHHHHH# ##.######",
-//     "      .   #HHHHHH#   .      ",
-//     "######.## #HHHHHH# ##.######",
-//     "######.## ######## ##.######",
-//     "######.##          ##.######",
-//     "######.## ######## ##.######",
-//     "######.## ######## ##.######",
-//     "#............##............#",
-//     "#.####.#####.##.#####.####.#",
-//     "#.####.#####.##.#####.####.#",
-//     "#X..##................##..X#",
-//     "###.##.##.########.##.##.###",
-//     "###.##.##.########.##.##.###",
-//     "#......##....##....##......#",
-//     "#.##########.##.##########.#",
-//     "#.##########.##.##########.#",
-//     "#..........................#",
+//     "#................X......#..#",
+//     "#......#..............#.#..#",
+//     "#......#....######....#.#..#",
+//     "#...####..............#.#..#",
+//     "#......#.......X.X....#.#..#",
+//     "#......###########....#....#",
+//     "#......#..............#....#",
+//     "#.....................#....#",
 //     "############################",
 // ];
-const MAP_STR: [&'static str; 10] = [
-    "############################",
-    "#................X.........#",
-    "#..........................#",
-    "#..........................#",
-    "#..........................#",
-    "#..............X.X.........#",
-    "#..........................#",
-    "#..........................#",
-    "#..........................#",
-    "############################",
-];
 
-// TODO remove usage of these constants from gamp.rs.
-pub const MAP_WIDTH: usize = MAP_STR[0].len();
-pub const MAP_HEIGHT: usize = MAP_STR.len();
-
-fn pellet_coords() -> Vec<(usize, usize)> {
-    MAP_STR
+fn pellet_coords(map_str: &Vec<Vec<char>>) -> Vec<(usize, usize)> {
+    map_str
         .iter()
         .enumerate()
         .map(|(y, line)| {
-            line.chars()
+            line.iter()
                 .enumerate()
-                .filter(|(_, c)| *c == '.')
+                .filter(|(_, c)| **c == '.')
                 .map(move |(x, _)| (x, y))
                 .collect::<Vec<(usize, usize)>>()
         })
@@ -65,9 +28,27 @@ fn pellet_coords() -> Vec<(usize, usize)> {
         })
 }
 
+// Introduce 2d array type to simplify this code?
+// fn ghost_coords(map_str: &Vec<Vec<char>>, marker: char) -> (i32, i32) {
+//     let mut coords = map_str.iter().enumerate().map(|(y, line)| {
+//         line.iter()
+//             .enumerate()
+//             .filter(|(_, c)| **c == marker)
+//             .map(move |(x, _)| (x, y))
+//             .collect::<Vec<(usize, usize)>>()
+//     });
+//     if coords.len() == 1 {
+//         let c = coords.next().unwrap()[0];
+//         return (c.0 as i32, c.1 as i32);
+//     } else {
+//         eprintln!("coords: {:?} for marker; {}", coords, marker);
+//         panic!("Expected exactly one ghotst of this type.");
+//     }
+// }
+
 pub struct Map {
-    width: usize,
-    height: usize,
+    pub width: usize,
+    pub height: usize,
     tiles: Vec<Tile>,
     pellets: u32,
     pellet_coords: Vec<(usize, usize)>,
@@ -94,8 +75,27 @@ fn tile_from_char(c: char) -> Option<Tile> {
 }
 
 impl Map {
-    pub fn new() -> Self {
-        Map::default()
+    pub fn new(map_str: Vec<Vec<char>>) -> Self {
+        let map_width = map_str[0].len();
+        let map_height = map_str.len();
+        let pellet_coords = pellet_coords(&map_str);
+        let tiles: Vec<Tile> = map_str
+            .into_iter()
+            .flatten()
+            .filter_map(tile_from_char)
+            .collect();
+        assert_eq!(tiles.len(), map_width * map_height);
+        let n_pellets = tiles
+            .iter()
+            .filter(|c| if let Tile::Dot = c { true } else { false })
+            .count() as u32;
+        Map {
+            width: map_width,
+            height: map_height,
+            tiles,
+            pellet_coords,
+            pellets: n_pellets,
+        }
     }
 
     pub fn get(&self, x: i32, y: i32) -> Option<Tile> {
@@ -152,30 +152,6 @@ impl Map {
             self.tiles[self.width * y + x] = Tile::Dot;
         }
         self.pellets = self.pellet_coords.len() as u32;
-    }
-}
-
-impl Default for Map {
-    fn default() -> Self {
-        let map_width = MAP_STR[0].len();
-        let map_height = MAP_STR.len();
-        let tiles: Vec<Tile> = MAP_STR
-            .iter()
-            .flat_map(|x| x.chars())
-            .filter_map(tile_from_char)
-            .collect();
-        assert_eq!(tiles.len(), map_width * map_height);
-        let n_pellets = tiles
-            .iter()
-            .filter(|c| if let Tile::Dot = c { true } else { false })
-            .count() as u32;
-        Map {
-            width: map_width,
-            height: map_height,
-            tiles,
-            pellet_coords: pellet_coords(),
-            pellets: n_pellets,
-        }
     }
 }
 
